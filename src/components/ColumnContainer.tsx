@@ -1,5 +1,5 @@
 import React from "react";
-import { useSortable } from "@dnd-kit/sortable";
+import { SortableContext, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 import { Column, Id, Task } from "../types";
@@ -27,6 +27,8 @@ function ColumnContainer({
   onDeleteTask,
 }: Props) {
   const [editMode, setEditMode] = React.useState(false);
+
+  const taskIds = React.useMemo(() => tasks.map((task) => task.id), [tasks]);
 
   const {
     setNodeRef,
@@ -100,14 +102,16 @@ function ColumnContainer({
 
       {/* Column task container */}
       <div className="flex flex-grow flex-col gap-4 p-2 overflow-x-hidden overflow-y-auto">
-        {tasks.map((task) => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            onUpdateTask={onUpdateTask}
-            onDetele={onDeleteTask}
-          />
-        ))}
+        <SortableContext items={taskIds}>
+          {tasks.map((task) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              onUpdateTask={onUpdateTask}
+              onDetele={onDeleteTask}
+            />
+          ))}
+        </SortableContext>
       </div>
 
       {/* Column footer */}

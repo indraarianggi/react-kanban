@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import {
   DndContext,
   DragEndEvent,
+  DragOverEvent,
   DragOverlay,
   DragStartEvent,
   PointerSensor,
@@ -14,6 +15,7 @@ import { SortableContext, arrayMove } from "@dnd-kit/sortable";
 import { Column, Id, Task } from "../types";
 import PlusIcon from "../icons/PlusIcon";
 import ColumnContainer from "./ColumnContainer";
+import TaskCard from "./TaskCard";
 
 function KanbanBoard() {
   const [columns, setColumns] = React.useState<Column[]>([]);
@@ -25,6 +27,7 @@ function KanbanBoard() {
   const [tasks, setTasks] = React.useState<Task[]>([]);
 
   const [activeColumn, setActiveColumn] = React.useState<Column | null>(null);
+  const [activeTask, setActiveTask] = React.useState<Task | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -61,8 +64,11 @@ function KanbanBoard() {
 
       return col;
     });
-
     setColumns(newColumns);
+
+    // delete task in the deleted column
+    const filteredTasks = tasks.filter((task) => task.columnId !== id);
+    setTasks(filteredTasks);
   };
 
   const createNewTask = (columnId: Id) => {
@@ -76,8 +82,8 @@ function KanbanBoard() {
   };
 
   const deleteTask = (taskId: Id) => {
-    const newTasks = tasks.filter((task) => task.id !== taskId);
-    setTasks(newTasks);
+    const filteredTasks = tasks.filter((task) => task.id !== taskId);
+    setTasks(filteredTasks);
   };
 
   const updateTask = (taskId: Id, content: string) => {
@@ -97,9 +103,17 @@ function KanbanBoard() {
       setActiveColumn(event.active.data.current.column);
       return;
     }
+
+    if (event.active.data.current?.type === "Task") {
+      setActiveTask(event.active.data.current.task);
+      return;
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    setActiveColumn(null);
+    setActiveTask(null);
+
     const { active, over } = event;
 
     if (!over) return;
@@ -121,12 +135,55 @@ function KanbanBoard() {
     });
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+
+    if (!over) return;
+
+    const activeId = active.id; // can be column id or task id
+    const overId = over.id; // can be column id or task id
+
+    if (activeId === overId) return;
+
+    const isActiveATask = active.data.current?.type === "Task";
+    const isOverATask = over.data.current?.type === "Task";
+    const isOverAColumn = over.data.current?.type === "Column";
+
+    if (!isActiveATask) return;
+
+    // Dropping a Task over another Task (in the same/another Column)
+    if (isActiveATask && isOverATask) {
+      setTasks((prevTasks) => {
+        const activeIndex = prevTasks.findIndex((t) => t.id === activeId);
+        const overIndex = prevTasks.findIndex((t) => t.id === overId);
+
+        // Move task to another column, if the columnId is different
+        prevTasks[activeIndex].columnId = prevTasks[overIndex].columnId;
+
+        return arrayMove(prevTasks, activeIndex, overIndex);
+      });
+    }
+
+    // Dropping a Task over another Column
+    if (isActiveATask && isOverAColumn) {
+      setTasks((prevTasks) => {
+        const activeIndex = prevTasks.findIndex((t) => t.id === activeId);
+
+        // Move task to another column, if the columnId is different
+        prevTasks[activeIndex].columnId = overId;
+
+        return arrayMove(prevTasks, activeIndex, activeIndex);
+      });
+    }
+  };
+
   return (
     <div className="m-auto flex min-h-screen w-full items-center overflow-x-auto overflow-y-hidden px-[40px]">
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
       >
         <div className="m-auto flex gap-4">
           <div className="flex gap-4">
@@ -167,6 +224,13 @@ function KanbanBoard() {
                 onCreateTask={createNewTask}
                 onUpdateTask={updateTask}
                 onDeleteTask={deleteTask}
+              />
+            )}
+            {activeTask && (
+              <TaskCard
+                task={activeTask}
+                onUpdateTask={updateTask}
+                onDetele={deleteTask}
               />
             )}
           </DragOverlay>,
