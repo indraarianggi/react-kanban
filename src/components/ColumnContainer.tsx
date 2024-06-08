@@ -2,16 +2,30 @@ import React from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+import { Column, Id, Task } from "../types";
 import TrashIcon from "../icons/TrashIcon";
-import { Column, Id } from "../types";
+import PlusIcon from "../icons/PlusIcon";
+import TaskCard from "./TaskCard";
 
 interface Props {
   column: Column;
+  tasks?: Task[];
   onUpdateColumn: (id: Id, title: string) => void;
   onDelete: (id: Id) => void;
+  onCreateTask: (columnId: Id) => void;
+  onUpdateTask: (id: Id, content: string) => void;
+  onDeleteTask: (taskId: Id) => void;
 }
 
-function ColumnContainer({ column, onUpdateColumn, onDelete }: Props) {
+function ColumnContainer({
+  column,
+  tasks = [],
+  onUpdateColumn,
+  onDelete,
+  onCreateTask,
+  onUpdateTask,
+  onDeleteTask,
+}: Props) {
   const [editMode, setEditMode] = React.useState(false);
 
   const {
@@ -78,17 +92,32 @@ function ColumnContainer({ column, onUpdateColumn, onDelete }: Props) {
         </div>
         <button
           onClick={() => onDelete(column.id)}
-          className="stroke-gray-500 hover:stroke-white hover:bg-columnBackgroundColor px-1 py-2"
+          className="stroke-gray-500 hover:stroke-white hover:bg-columnBackgroundColor px-1 py-2 rounded"
         >
           <TrashIcon />
         </button>
       </div>
 
       {/* Column task container */}
-      <div className="flex flex-grow">Content</div>
+      <div className="flex flex-grow flex-col gap-4 p-2 overflow-x-hidden overflow-y-auto">
+        {tasks.map((task) => (
+          <TaskCard
+            key={task.id}
+            task={task}
+            onUpdateTask={onUpdateTask}
+            onDetele={onDeleteTask}
+          />
+        ))}
+      </div>
 
       {/* Column footer */}
-      <div>Footer</div>
+      <button
+        onClick={() => onCreateTask(column.id)}
+        className="flex gap-2 items-center border-columnBackgroundColor border-2 rounded-md p-4 border-x-columnBackgroundColor hover:bg-mainBackgroundColor hover:text-rose-500 active:bg-black"
+      >
+        <PlusIcon />
+        Add Task
+      </button>
     </div>
   );
 }

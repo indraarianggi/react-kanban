@@ -11,8 +11,8 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove } from "@dnd-kit/sortable";
 
+import { Column, Id, Task } from "../types";
 import PlusIcon from "../icons/PlusIcon";
-import { Column, Id } from "../types";
 import ColumnContainer from "./ColumnContainer";
 
 function KanbanBoard() {
@@ -21,6 +21,8 @@ function KanbanBoard() {
     () => columns.map((col) => col.id),
     [columns]
   );
+
+  const [tasks, setTasks] = React.useState<Task[]>([]);
 
   const [activeColumn, setActiveColumn] = React.useState<Column | null>(null);
 
@@ -63,8 +65,34 @@ function KanbanBoard() {
     setColumns(newColumns);
   };
 
+  const createNewTask = (columnId: Id) => {
+    const newTask: Task = {
+      id: generateId(),
+      columnId,
+      content: `Task ${tasks.length + 1}`,
+    };
+
+    setTasks([...tasks, newTask]);
+  };
+
+  const deleteTask = (taskId: Id) => {
+    const newTasks = tasks.filter((task) => task.id !== taskId);
+    setTasks(newTasks);
+  };
+
+  const updateTask = (taskId: Id, content: string) => {
+    const newTasks = tasks.map((task) => {
+      if (task.id === taskId) {
+        return { ...task, content };
+      }
+
+      return task;
+    });
+
+    setTasks(newTasks);
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
-    console.log("DRAG START", event);
     if (event.active.data.current?.type === "Column") {
       setActiveColumn(event.active.data.current.column);
       return;
@@ -107,8 +135,12 @@ function KanbanBoard() {
                 <ColumnContainer
                   key={col.id}
                   column={col}
+                  tasks={tasks.filter((task) => task.columnId === col.id)}
                   onUpdateColumn={updateColumn}
                   onDelete={deleteColumn}
+                  onCreateTask={createNewTask}
+                  onUpdateTask={updateTask}
+                  onDeleteTask={deleteTask}
                 />
               ))}
             </SortableContext>
@@ -127,8 +159,14 @@ function KanbanBoard() {
             {activeColumn && (
               <ColumnContainer
                 column={activeColumn}
+                tasks={tasks.filter(
+                  (task) => task.columnId === activeColumn.id
+                )}
                 onUpdateColumn={updateColumn}
                 onDelete={deleteColumn}
+                onCreateTask={createNewTask}
+                onUpdateTask={updateTask}
+                onDeleteTask={deleteTask}
               />
             )}
           </DragOverlay>,
